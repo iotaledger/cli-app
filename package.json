@@ -1,0 +1,35 @@
+{
+  "name": "cli-app",
+  "version": "0.0.1",
+  "description": "IOTA CLI",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iotaledger/cli-app.git"
+  },
+  "keywords": [
+    "cli",
+    "iota",
+    "app",
+    "wallet"
+  ],
+  "author": "Dominik Schiener (IOTA Foundation)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/iotaledger/cli-app/issues"
+  },
+  "preferGlobal": true,
+  "bin": {
+    "iota-cli": "index.js"
+  },
+  "homepage": "https://github.com/iotaledger/cli-app#readme",
+  "dependencies": {
+    "chalk": "^1.1.3",
+    "clear": "0.0.1",
+    "figlet": "^1.1.2",
+    "vorpal": "^1.11.4"
+  }
+}
