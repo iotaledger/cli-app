@@ -41,25 +41,43 @@ const refreshServerInfo = () => {
 };
 
 vorpal
-    .command('nodeinfo', 'Shows information about the connected node.')
+    .command('neighbors', 'Shows neighbor information.')
     .action((args, callback) => {
       if (!currentServerInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to a node.  Try "server".'));
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+        return callback();
+      }
+
+      iotajs.api.getNeighbors((err, neighbors) => {
+        if (err) {
+          return callback();
+        }
+
+        delete neighbors.duration;
+        vorpal.log(prettyjson.render(neighbors));
+        callback();
+      });
+
+    });
+
+vorpal
+    .command('nodeinfo', 'Shows connected node information.')
+    .action((args, callback) => {
+      if (!currentServerInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
         return callback();
       }
 
       iotajs.api.getNodeInfo((err, serverInfo) => {
         if (err) {
           currentServerInfo = undefined;
-          return;
+          return callback();
         }
 
-        currentServerInfo = serverInfo;
-        setDelimiter();
-
+        delete serverInfo.duration;
         vorpal.log(prettyjson.render(serverInfo));
+        callback();
       });
-      callback();
     });
 
 vorpal
@@ -92,6 +110,9 @@ vorpal
     }
 
     iotajs.changeNode({host, port});
+    if (host !== 'http://localhost') {
+      vorpal.log('This may take a few seconds for a remote node.  Did you turn on remote access?');
+    }
     refreshServerInfo();
     callback();
   });
