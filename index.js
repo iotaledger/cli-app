@@ -1,9 +1,10 @@
 const chalk = require('chalk');
 const IOTA = require('iota.lib.js');
+const prettyjson = require('prettyjson');
 const vorpal = require('vorpal')();
 
 let seed = '';
-let serverInfo = undefined;
+let currentServerInfo = undefined;
 
 let iotajs = new IOTA({
   host: 'http://localhost',
@@ -12,11 +13,11 @@ let iotajs = new IOTA({
 
 const setDelimiter = () => {
   let status = chalk.red('disconnected');
-  if (serverInfo) {
-    if (Math.abs(serverInfo.latestMilestoneIndex - serverInfo.latestSolidSubtangleMilestoneIndex) < 10) {
+  if (currentServerInfo) {
+    if (Math.abs(currentServerInfo.latestMilestoneIndex - currentServerInfo.latestSolidSubtangleMilestoneIndex) < 10) {
       status = chalk.green('✓');
     } else {
-      status = chalk.yellow(`${serverInfo.latestSolidSubtangleMilestoneIndex}/${serverInfo.latestMilestoneIndex}`);
+      status = chalk.yellow(`${currentServerInfo.latestSolidSubtangleMilestoneIndex}/${currentServerInfo.latestMilestoneIndex}`);
     }
   }
   const newDelimiter = `iota (${iotajs.provider} - ${status})$ `;
@@ -28,16 +29,38 @@ const setDelimiter = () => {
 };
 
 const refreshServerInfo = () => {
-  iotajs.api.getNodeInfo((err, newServerInfo) => {
+  iotajs.api.getNodeInfo((err, serverInfo) => {
     if (err) {
-      serverInfo = undefined;
+      currentServerInfo = undefined;
       return;
     }
 
-    serverInfo = newServerInfo;
+    currentServerInfo = serverInfo;
     setDelimiter();
   });
 };
+
+vorpal
+    .command('nodeinfo', 'Shows information about the connected node.')
+    .action((args, callback) => {
+      if (!currentServerInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to a node.  Try "server".'));
+        return callback();
+      }
+
+      iotajs.api.getNodeInfo((err, serverInfo) => {
+        if (err) {
+          currentServerInfo = undefined;
+          return;
+        }
+
+        currentServerInfo = serverInfo;
+        setDelimiter();
+
+        vorpal.log(prettyjson.render(serverInfo));
+      });
+      callback();
+    });
 
 vorpal
     .command('seed <seed>', 'Sets your seed/password.')

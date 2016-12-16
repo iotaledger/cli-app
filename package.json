@@ -32,6 +32,7 @@
     "clear": "0.0.1",
     "figlet": "^1.1.2",
     "iota.lib.js": "0.0.8",
+    "prettyjson": "^1.2.1",
     "vorpal": "^1.11.4"
   },
   "devDependencies": {
