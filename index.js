@@ -11,7 +11,16 @@ let iotajs = new IOTA({
 });
 
 const setDelimiter = () => {
-    const newDelimiter = `iota (${iotajs.provider} - ${serverInfo ? chalk.green('connected') : chalk.red('disconnected')})$ `;
+    let status = chalk.red('disconnected');
+    if (serverInfo) {
+        if (Math.abs(serverInfo.latestMilestoneIndex - serverInfo.latestSolidSubtangleMilestoneIndex) < 10) {
+            status = chalk.green('✓');
+        } else {
+            status = chalk.yellow(`${serverInfo.latestSolidSubtangleMilestoneIndex}/${serverInfo.latestMilestoneIndex}`);
+        }
+    }
+    const newDelimiter = `iota (${iotajs.provider} - ${status})$ `;
+
     if (newDelimiter !== vorpal.ui.delimiter()) {
         vorpal.delimiter(newDelimiter);
         vorpal.ui.delimiter(newDelimiter);
