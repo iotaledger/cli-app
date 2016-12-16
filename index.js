@@ -11,7 +11,7 @@ let iotajs = new IOTA({
 });
 
 const setDelimiter = () => {
-    const newDelimiter = `iota (${iotajs.provider} - ${serverInfo ? 'connected' : 'disconnected'})$ `;
+    const newDelimiter = `iota (${iotajs.provider} - ${serverInfo ? chalk.green('connected') : chalk.red('disconnected')})$ `;
     if (newDelimiter !== vorpal.ui.delimiter()) {
         vorpal.delimiter(newDelimiter);
         vorpal.ui.delimiter(newDelimiter);
