@@ -8,7 +8,7 @@ const Promise = require('bluebird');
 const vorpal = require('vorpal')();
 
 let balance = 0;
-let currentServerInfo = undefined;
+let currentNodeInfo = undefined;
 let seed = '';
 
 let iotajs = new IOTA({
@@ -18,14 +18,14 @@ let iotajs = new IOTA({
 
 const setDelimiter = () => {
   let status = chalk.red('disconnected');
-  if (currentServerInfo) {
+  if (currentNodeInfo) {
     if (
-      Math.abs(currentServerInfo.latestMilestoneIndex - currentServerInfo.latestSolidSubtangleMilestoneIndex) < 15 &&
-      currentServerInfo.neighbors >= 4
+      Math.abs(currentNodeInfo.latestMilestoneIndex - currentNodeInfo.latestSolidSubtangleMilestoneIndex) < 15 &&
+      currentNodeInfo.neighbors >= 4
     ) {
       status = chalk.green('✓');
     } else {
-      status = chalk.yellow(`${currentServerInfo.latestSolidSubtangleMilestoneIndex}/${currentServerInfo.latestMilestoneIndex}`);
+      status = chalk.yellow(`${currentNodeInfo.latestSolidSubtangleMilestoneIndex}/${currentNodeInfo.latestMilestoneIndex}`);
     }
   }
   const newDelimiter = `iota (${iotajs.host}:${iotajs.port} ${status})$ `;
@@ -37,22 +37,22 @@ const setDelimiter = () => {
 };
 
 const refreshServerInfo = () => {
-  iotajs.api.getNodeInfo((err, serverInfo) => {
+  iotajs.api.getNodeInfo((err, nodeInfo) => {
     if (err) {
-      currentServerInfo = undefined;
+      currentNodeInfo = undefined;
       return;
     }
 
-    currentServerInfo = serverInfo;
+    currentNodeInfo = nodeInfo;
     setDelimiter();
   });
 };
 
 vorpal
-  .command('api', 'Sends an arbitrary command to the server')
+  .command('api', 'Sends an arbitrary command to the node')
   .action(function(args, callback) {
-    if (!currentServerInfo) {
-      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
       return callback();
     }
 
@@ -89,8 +89,8 @@ vorpal
 vorpal
     .command('balance', 'Gets balance for current seed')
     .action((args, callback) => {
-      if (!currentServerInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+      if (!currentNodeInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
         return callback();
       }
 
@@ -129,14 +129,14 @@ vorpal
 vorpal
     .command('healthcheck', 'Looks for any node problems.')
     .action((args, callback) => {
-      if (!currentServerInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+      if (!currentNodeInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
         return callback();
       }
 
       iotajs.api.getNodeInfo((err, data) => {
         if (err) {
-          currentServerInfo = undefined;
+          currentNodeInfo = undefined;
           return callback();
         }
 
@@ -173,8 +173,8 @@ vorpal
 vorpal
     .command('neighbors [address]', 'Shows neighbor information.  Address can be a partial match.')
     .action((args, callback) => {
-      if (!currentServerInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+      if (!currentNodeInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
         return callback();
       }
 
@@ -193,14 +193,14 @@ vorpal
 vorpal
     .command('nodeinfo', 'Shows connected node information.')
     .action((args, callback) => {
-      if (!currentServerInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+      if (!currentNodeInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
         return callback();
       }
 
       iotajs.api.getNodeInfo((err, data) => {
         if (err) {
-          currentServerInfo = undefined;
+          currentNodeInfo = undefined;
           return callback();
         }
 
@@ -227,7 +227,7 @@ vorpal
     });
 
 vorpal
-  .command('server <address>', 'connects to a new iota node. (ex. 1.2.3.4)')
+  .command('node <address>', 'connects to a new iota node. (ex. 1.2.3.4)')
   .action((args, callback) => {
     const pieces = args.address.replace(/\d:\/\//, '').split(':');
     const host = `http://${pieces[0]}`;
@@ -253,8 +253,8 @@ vorpal
 vorpal
   .command('transfer <address> <value>', 'Sends iotas to the address')
   .action((args, callback) => {
-    if (!currentServerInfo) {
-      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
       return callback();
     }
 
