@@ -1,5 +1,8 @@
+'use strict';
+
 const chalk = require('chalk');
 const IOTA = require('iota.lib.js');
+const JSON5 = require('json5'); // for relaxed JSON parsing in the api command
 const prettyjson = require('prettyjson');
 const Promise = require('bluebird');
 const vorpal = require('vorpal')();
@@ -44,6 +47,44 @@ const refreshServerInfo = () => {
     setDelimiter();
   });
 };
+
+vorpal
+  .command('api', 'Sends an arbitrary command to the server')
+  .action(function(args, callback) {
+    if (!currentServerInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+      return callback();
+    }
+
+    return this.prompt({
+      type: 'input',
+      name: 'commandString',
+      default: '',
+      message: 'Enter the command JSON: ',
+    }, result => {
+      if (result.continue) {
+        return callback();
+      }
+
+      let command;
+      try {
+        command = JSON5.parse(result.commandString);
+      } catch (err) {
+        vorpal.log(chalk.red(`Invalid JSON: ${err}`));
+        return callback();
+      }
+
+      iotajs.api.sendCommand(command, (err, success) => {
+        if (err) {
+          vorpal.log(chalk.red(err));
+          return callback();
+        }
+
+        vorpal.log(JSON.stringify(success, null, 2));
+        callback();
+      });
+    });
+  });
 
 vorpal
     .command('balance', 'Gets balance for current seed')
@@ -109,7 +150,7 @@ vorpal
             ? chalk.green('✓')
             : chalk.red('out of sync')}`);
 
-        vorpal.log(`Number of neighbors: ${
+        vorpal.log(`Number of neighbors (4-9): ${
           data.neighbors >= 4 && data.neighbors <= 9
             ? chalk.green('✓')
             : chalk.red('you need between 4 and 9 neighbors.  You have ${data.neighbors.length}')}`);
@@ -171,6 +212,7 @@ vorpal
 
 vorpal
     .command('seed <seed>', 'Sets your seed/password.')
+    .alias('password')
     .action((args, callback) => {
       vorpal.log(`Setting seed to "${args.seed}"`);
       seed = args.seed.toUpperCase().replace(/[^A-Z9]/g, '9');
@@ -248,3 +290,9 @@ refreshServerInfo();
 setInterval(refreshServerInfo, 10 * 1000);
 
 vorpal.show();
+
+// Give the iotajs connection time to settle before processing command line params
+// TODO make this more deterministic.  timeouts = ugly
+setTimeout(() => {
+  vorpal.parse(process.argv);
+}, 100);

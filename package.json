@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "IOTA CLI",
   "main": "index.js",
+  "engines": {
+    "node": ">=4"
+  },
   "scripts": {
     "lint": "node_modules/eslint/bin/eslint.js -c .eslintrc.json index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,7 +20,7 @@
     "app",
     "wallet"
   ],
-  "author": "Dominik Schiener (IOTA Foundation)",
+  "author": "Mark Bradshaw (IOTA Foundation)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/iotaledger/cli-app/issues"
@@ -30,9 +33,8 @@
   "dependencies": {
     "bluebird": "^3.4.6",
     "chalk": "^1.1.3",
-    "clear": "0.0.1",
-    "figlet": "^1.1.2",
     "iota.lib.js": "0.0.13",
+    "json5": "^0.5.1",
     "prettyjson": "^1.2.1",
     "vorpal": "^1.11.4"
   },
