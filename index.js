@@ -214,6 +214,41 @@ vorpal
     callback();
   });
 
+vorpal
+  .command('transfer <address> <value>', 'Sends iotas to the address')
+  .action((args, callback) => {
+    if (!currentServerInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+      return callback();
+    }
+
+    if (!seed) {
+      vorpal.log(chalk.red('Please set a seed first with the "seed" command.'));
+      return callback();
+    }
+
+    if (Number.isNaN(args.value) || Math.floor(args.value) !== args.value) {
+      vorpal.log(chalk.red('Please supply an integer amount.'));
+      return callback();
+    }
+
+    vorpal.log('One moment while the transfer is made.  This can take a few minutes.');
+    // TODO handle message and tag
+    var transfers = [{
+      address: args.address,
+      value: parseInt(args.value),
+      message: '',
+      tag: ''
+    }];
+
+    iotajs.api.sendTransfer(seed, 9, 18, transfers, {}, err => {
+      if (err) {
+        vorpal.log(chalk.red(err));
+      }
+      callback();
+    });
+  });
+
 setDelimiter();
 refreshServerInfo();
 setInterval(refreshServerInfo, 10 * 1000);
