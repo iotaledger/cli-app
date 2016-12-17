@@ -41,20 +41,22 @@ const refreshServerInfo = () => {
 };
 
 vorpal
-    .command('neighbors', 'Shows neighbor information.')
+    .command('neighbors [address]', 'Shows neighbor information.  Address can be a partial match.')
     .action((args, callback) => {
       if (!currentServerInfo) {
         vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
         return callback();
       }
 
-      iotajs.api.getNeighbors((err, neighbors) => {
+      iotajs.api.getNeighbors((err, data) => {
         if (err) {
           return callback();
         }
 
-        delete neighbors.duration;
-        vorpal.log(prettyjson.render(neighbors));
+
+        vorpal.log(prettyjson.render(data.neighbors.filter(
+          n => n.address.indexOf(args.address || '') !== -1
+        )));
         callback();
       });
 
@@ -68,14 +70,14 @@ vorpal
         return callback();
       }
 
-      iotajs.api.getNodeInfo((err, serverInfo) => {
+      iotajs.api.getNodeInfo((err, data) => {
         if (err) {
           currentServerInfo = undefined;
           return callback();
         }
 
-        delete serverInfo.duration;
-        vorpal.log(prettyjson.render(serverInfo));
+        delete data.duration;
+        vorpal.log(prettyjson.render(data));
         callback();
       });
     });
