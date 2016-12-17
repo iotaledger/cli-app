@@ -4,7 +4,6 @@ const prettyjson = require('prettyjson');
 const Promise = require('bluebird');
 const vorpal = require('vorpal')();
 
-let addresses = undefined;
 let balance = 0;
 let currentServerInfo = undefined;
 let seed = '';
@@ -62,16 +61,11 @@ vorpal
       vorpal.log('One moment while we collect the data.');
 
       new Promise((resolve, reject) => {
-        if (addresses) {
-          return resolve(addresses);
-        }
-
-        iotajs.api.getNewAddress(seed, {returnAll: true}, (err, allAddresses) => {
+        iotajs.api.getNewAddress(seed, {returnAll: true}, (err, addresses) => {
           if (err) {
             return reject(err);
           }
 
-          addresses = allAddresses;
           resolve(addresses);
         });
       })
@@ -82,7 +76,7 @@ vorpal
           }
 
           balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
-          vorpal.log(`Your current balance is ${balance} iota`);
+          vorpal.log(`Your current balance is ${balance} iota.`);
 
           resolve();
         });
