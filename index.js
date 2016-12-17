@@ -1,10 +1,13 @@
 const chalk = require('chalk');
 const IOTA = require('iota.lib.js');
 const prettyjson = require('prettyjson');
+const Promise = require('bluebird');
 const vorpal = require('vorpal')();
 
-let seed = '';
+let addresses = undefined;
+let balance = 0;
 let currentServerInfo = undefined;
+let seed = '';
 
 let iotajs = new IOTA({
   host: 'http://localhost',
@@ -14,13 +17,16 @@ let iotajs = new IOTA({
 const setDelimiter = () => {
   let status = chalk.red('disconnected');
   if (currentServerInfo) {
-    if (Math.abs(currentServerInfo.latestMilestoneIndex - currentServerInfo.latestSolidSubtangleMilestoneIndex) < 15) {
+    if (
+      Math.abs(currentServerInfo.latestMilestoneIndex - currentServerInfo.latestSolidSubtangleMilestoneIndex) < 15 &&
+      currentServerInfo.neighbors >= 4
+    ) {
       status = chalk.green('✓');
     } else {
       status = chalk.yellow(`${currentServerInfo.latestSolidSubtangleMilestoneIndex}/${currentServerInfo.latestMilestoneIndex}`);
     }
   }
-  const newDelimiter = `iota (${iotajs.provider} - ${status})$ `;
+  const newDelimiter = `iota (${iotajs.host}:${iotajs.port} ${status})$ `;
 
   if (newDelimiter !== vorpal.ui.delimiter()) {
     vorpal.delimiter(newDelimiter);
@@ -39,6 +45,51 @@ const refreshServerInfo = () => {
     setDelimiter();
   });
 };
+
+vorpal
+    .command('balance', 'Gets balance for current seed')
+    .action((args, callback) => {
+      if (!currentServerInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+        return callback();
+      }
+
+      if (!seed) {
+        vorpal.log(chalk.red('Please set a seed first with the "seed" command.'));
+        return callback();
+      }
+
+      vorpal.log('One moment while we collect the data.');
+
+      new Promise((resolve, reject) => {
+        if (addresses) {
+          return resolve(addresses);
+        }
+
+        iotajs.api.getNewAddress(seed, {returnAll: true}, (err, allAddresses) => {
+          if (err) {
+            return reject(err);
+          }
+
+          addresses = allAddresses;
+          resolve(addresses);
+        });
+      })
+      .then(addresses => new Promise((resolve, reject) => {
+        iotajs.api.getBalances(addresses, 100, (err, data) => {
+          if (err) {
+            return reject(err);
+          }
+
+          balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
+          vorpal.log(`Your current balance is ${balance} iota`);
+
+          resolve();
+        });
+      }))
+      .catch(err => vorpal.log(chalk.red(err)))
+      .finally(callback);
+    });
 
 vorpal
     .command('healthcheck', 'Looks for any node problems.')
@@ -97,13 +148,11 @@ vorpal
           return callback();
         }
 
-
         vorpal.log(prettyjson.render(data.neighbors.filter(
           n => n.address.indexOf(args.address || '') !== -1
         )));
         callback();
       });
-
     });
 
 vorpal
@@ -129,6 +178,7 @@ vorpal
 vorpal
     .command('seed <seed>', 'Sets your seed/password.')
     .action((args, callback) => {
+      vorpal.log(`Setting seed to "${args.seed}"`);
       seed = args.seed.toUpperCase().replace(/[^A-Z9]/g, '9');
       while (seed.length < 81) {
         seed += '9';
@@ -136,7 +186,7 @@ vorpal
       if (seed.length > 81) {
         seed = seed.slice(0, 81);
       }
-      vorpal.log(`Setting seed to ${seed}`);
+      balance = 0;
       callback();
     });
 
@@ -159,6 +209,7 @@ vorpal
     if (host !== 'http://localhost') {
       vorpal.log('This may take a few seconds for a remote node.  Did you turn on remote access?');
     }
+    balance = 0;
     refreshServerInfo();
     callback();
   });
