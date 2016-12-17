@@ -14,7 +14,7 @@ let iotajs = new IOTA({
 const setDelimiter = () => {
   let status = chalk.red('disconnected');
   if (currentServerInfo) {
-    if (Math.abs(currentServerInfo.latestMilestoneIndex - currentServerInfo.latestSolidSubtangleMilestoneIndex) < 10) {
+    if (Math.abs(currentServerInfo.latestMilestoneIndex - currentServerInfo.latestSolidSubtangleMilestoneIndex) < 15) {
       status = chalk.green('✓');
     } else {
       status = chalk.yellow(`${currentServerInfo.latestSolidSubtangleMilestoneIndex}/${currentServerInfo.latestMilestoneIndex}`);
@@ -39,6 +39,50 @@ const refreshServerInfo = () => {
     setDelimiter();
   });
 };
+
+vorpal
+    .command('healthcheck', 'Looks for any node problems.')
+    .action((args, callback) => {
+      if (!currentServerInfo) {
+        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "server".'));
+        return callback();
+      }
+
+      iotajs.api.getNodeInfo((err, data) => {
+        if (err) {
+          currentServerInfo = undefined;
+          return callback();
+        }
+
+        vorpal.log(`Free memory: ${
+          data.jreFreeMemory > 500000
+            ? chalk.green('✓')
+            : chalk.red(data.jreFreeMemory)}`);
+
+        vorpal.log(`Node sync: ${
+          Math.abs(data.latestMilestoneIndex - data.latestSolidSubtangleMilestoneIndex) < 15
+            ? chalk.green('✓')
+            : chalk.red('out of sync')}`);
+
+        vorpal.log(`Number of neighbors: ${
+          data.neighbors >= 4 && data.neighbors <= 9
+            ? chalk.green('✓')
+            : chalk.red('you need between 4 and 9 neighbors.  You have ${data.neighbors.length}')}`);
+
+        iotajs.api.getNeighbors((err, neighborData) => {
+          if (err) {
+            return callback();
+          }
+
+          neighborData.neighbors.filter(
+            n => n.numberOfAllTransactions === 0
+          ).forEach(
+            n => vorpal.log(chalk.red(`Inactive neighbor: ${n.address}`))
+          );
+          callback();
+        });
+      });
+    });
 
 vorpal
     .command('neighbors [address]', 'Shows neighbor information.  Address can be a partial match.')
