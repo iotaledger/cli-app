@@ -7,8 +7,14 @@ const prettyjson = require('prettyjson');
 const Promise = require('bluebird');
 const vorpal = require('vorpal')();
 
+const milestoneLag = 15;
+const minNeighbors = 4;
+const maxNeighbors = 9;
+
 let balance = 0;
 let currentNodeInfo = undefined;
+let depth = 9;
+let minWeightMagnitude = 18;
 let seed = '';
 
 let iotajs = new IOTA({
@@ -20,8 +26,8 @@ const setDelimiter = () => {
   let status = chalk.red('disconnected');
   if (currentNodeInfo) {
     if (
-      Math.abs(currentNodeInfo.latestMilestoneIndex - currentNodeInfo.latestSolidSubtangleMilestoneIndex) < 15 &&
-      currentNodeInfo.neighbors >= 4
+      Math.abs(currentNodeInfo.latestMilestoneIndex - currentNodeInfo.latestSolidSubtangleMilestoneIndex) < milestoneLag &&
+      currentNodeInfo.neighbors >= minNeighbors
     ) {
       status = chalk.green('✓');
     } else {
@@ -87,144 +93,165 @@ vorpal
   });
 
 vorpal
-    .command('balance', 'Gets balance for current seed')
-    .action((args, callback) => {
-      if (!currentNodeInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+  .command('address', 'Generates an address.')
+  .action(function(args, callback) {
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+      return callback();
+    }
+
+    if (!seed) {
+      vorpal.log(chalk.red('Please set a seed first with the "seed" command.'));
+      return callback();
+    }
+
+    vorpal.log('One minute while we generate the address.');
+
+    iotajs.api.getNewAddress(seed, (err, address) => {
+      if (err) {
+        vorpal.log(chalk.red(err));
         return callback();
       }
 
-      if (!seed) {
-        vorpal.log(chalk.red('Please set a seed first with the "seed" command.'));
-        return callback();
-      }
+      vorpal.log(`The address is ${chalk.yellow(address)}`);
+      vorpal.log('Now we will send that address into the iota tangle.  One moment.');
 
-      vorpal.log('One moment while we collect the data.');
+      var transfers = [{
+        address: address,
+        value: 0
+      }];
 
-      new Promise((resolve, reject) => {
-        iotajs.api.getNewAddress(seed, {returnAll: true}, (err, addresses) => {
-          if (err) {
-            return reject(err);
-          }
-
-          resolve(addresses);
-        });
-      })
-      .then(addresses => new Promise((resolve, reject) => {
-        iotajs.api.getBalances(addresses, 100, (err, data) => {
-          if (err) {
-            return reject(err);
-          }
-
-          balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
-          vorpal.log(`Your current balance is ${balance} iota.`);
-
-          resolve();
-        });
-      }))
-      .catch(err => vorpal.log(chalk.red(err)))
-      .finally(callback);
-    });
-
-vorpal
-    .command('healthcheck', 'Looks for any node problems.')
-    .action((args, callback) => {
-      if (!currentNodeInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
-        return callback();
-      }
-
-      iotajs.api.getNodeInfo((err, data) => {
+      iotajs.api.sendTransfer(seed, depth, minWeightMagnitude, transfers, (err) => {
         if (err) {
-          currentNodeInfo = undefined;
-          return callback();
+          vorpal.log(chalk.red(err));
         }
-
-        vorpal.log(`Free memory: ${
-          data.jreFreeMemory > 500000
-            ? chalk.green('✓')
-            : chalk.red(data.jreFreeMemory)}`);
-
-        vorpal.log(`Node sync: ${
-          Math.abs(data.latestMilestoneIndex - data.latestSolidSubtangleMilestoneIndex) < 15
-            ? chalk.green('✓')
-            : chalk.red('out of sync')}`);
-
-        vorpal.log(`Number of neighbors (4-9): ${
-          data.neighbors >= 4 && data.neighbors <= 9
-            ? chalk.green('✓')
-            : chalk.red('you need between 4 and 9 neighbors.  You have ${data.neighbors.length}')}`);
-
-        iotajs.api.getNeighbors((err, neighborData) => {
-          if (err) {
-            return callback();
-          }
-
-          neighborData.neighbors.filter(
-            n => n.numberOfAllTransactions === 0
-          ).forEach(
-            n => vorpal.log(chalk.red(`Inactive neighbor: ${n.address}`))
-          );
-          callback();
-        });
-      });
-    });
-
-vorpal
-    .command('neighbors [address]', 'Shows neighbor information.  Address can be a partial match.')
-    .action((args, callback) => {
-      if (!currentNodeInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
-        return callback();
-      }
-
-      iotajs.api.getNeighbors((err, data) => {
-        if (err) {
-          return callback();
-        }
-
-        vorpal.log(prettyjson.render(data.neighbors.filter(
-          n => n.address.indexOf(args.address || '') !== -1
-        )));
+        vorpal.log('Done.  Your address is ready to use.');
         callback();
       });
     });
+  });
+
 
 vorpal
-    .command('nodeinfo', 'Shows connected node information.')
-    .action((args, callback) => {
-      if (!currentNodeInfo) {
-        vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+  .command('balance', 'Gets balance for current seed')
+  .action((args, callback) => {
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+      return callback();
+    }
+
+    if (!seed) {
+      vorpal.log(chalk.red('Please set a seed first with the "seed" command.'));
+      return callback();
+    }
+
+    vorpal.log('One moment while we collect the data.');
+
+    new Promise((resolve, reject) => {
+      iotajs.api.getNewAddress(seed, {returnAll: true}, (err, addresses) => {
+        if (err) {
+          return reject(err);
+        }
+
+        resolve(addresses);
+      });
+    })
+    .then(addresses => new Promise((resolve, reject) => {
+      iotajs.api.getBalances(addresses, 100, (err, data) => {
+        if (err) {
+          return reject(err);
+        }
+
+        balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
+        vorpal.log(`Your current balance is ${balance} iota.`);
+
+        resolve();
+      });
+    }))
+    .catch(err => vorpal.log(chalk.red(err)))
+    .finally(callback);
+  });
+
+vorpal
+  .command('depth <depth>', 'Sets depth.')
+  .action((args, callback) => {
+    depth = args.depth;
+    callback();
+  });
+
+vorpal
+  .command('healthcheck', 'Looks for any node problems.')
+  .action((args, callback) => {
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+      return callback();
+    }
+
+    iotajs.api.getNodeInfo((err, data) => {
+      if (err) {
+        currentNodeInfo = undefined;
         return callback();
       }
 
-      iotajs.api.getNodeInfo((err, data) => {
+      vorpal.log(`Free memory: ${
+        data.jreFreeMemory > 500000
+          ? chalk.green('✓')
+          : chalk.red(data.jreFreeMemory)}`);
+
+      vorpal.log(`Node sync: ${
+        Math.abs(data.latestMilestoneIndex - data.latestSolidSubtangleMilestoneIndex) < milestoneLag
+          ? chalk.green('✓')
+          : chalk.red('out of sync')}`);
+
+      vorpal.log(`Number of neighbors (${minNeighbors}-${maxNeighbors}): ${
+        data.neighbors >= minNeighbors && data.neighbors <= maxNeighbors
+          ? chalk.green('✓')
+          : chalk.red('you need between 4 and 9 neighbors.  You have ${data.neighbors.length}')}`);
+
+      iotajs.api.getNeighbors((err, neighborData) => {
         if (err) {
-          currentNodeInfo = undefined;
+          vorpal.log(chalk.red(err));
           return callback();
         }
 
-        delete data.duration;
-        vorpal.log(prettyjson.render(data));
+        neighborData.neighbors.filter(
+          n => n.numberOfAllTransactions === 0
+        ).forEach(
+          n => vorpal.log(chalk.red(`Inactive neighbor: ${n.address}`))
+        );
         callback();
       });
     });
+  });
 
 vorpal
-    .command('seed <seed>', 'Sets your seed/password.')
-    .alias('password')
-    .action((args, callback) => {
-      vorpal.log(`Setting seed to "${args.seed}"`);
-      seed = args.seed.toUpperCase().replace(/[^A-Z9]/g, '9');
-      while (seed.length < 81) {
-        seed += '9';
+  .command('minWeightMagnitude <mwm>', 'Sets minWeightMagnitude.')
+  .alias('mwm')
+  .action((args, callback) => {
+    minWeightMagnitude = args.mwm;
+    callback();
+  });
+
+vorpal
+  .command('neighbors [address]', 'Shows neighbor information.  Address can be a partial match.')
+  .action((args, callback) => {
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+      return callback();
+    }
+
+    iotajs.api.getNeighbors((err, data) => {
+      if (err) {
+        vorpal.log(chalk.red(err));
+        return callback();
       }
-      if (seed.length > 81) {
-        seed = seed.slice(0, 81);
-      }
-      balance = 0;
+
+      vorpal.log(prettyjson.render(data.neighbors.filter(
+        n => n.address.indexOf(args.address || '') !== -1
+      )));
       callback();
     });
+  });
 
 vorpal
   .command('node <address>', 'connects to a new iota node. (ex. 1.2.3.4)')
@@ -247,6 +274,42 @@ vorpal
     }
     balance = 0;
     refreshServerInfo();
+    callback();
+  });
+
+vorpal
+  .command('nodeinfo', 'Shows connected node information.')
+  .action((args, callback) => {
+    if (!currentNodeInfo) {
+      vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
+      return callback();
+    }
+
+    iotajs.api.getNodeInfo((err, data) => {
+      if (err) {
+        currentNodeInfo = undefined;
+        return callback();
+      }
+
+      delete data.duration;
+      vorpal.log(prettyjson.render(data));
+      callback();
+    });
+  });
+
+vorpal
+  .command('seed <seed>', 'Sets your seed/password.')
+  .alias('password')
+  .action((args, callback) => {
+    vorpal.log(`Setting seed to "${args.seed}"`);
+    seed = args.seed.toUpperCase().replace(/[^A-Z9]/g, '9');
+    while (seed.length < 81) {
+      seed += '9';
+    }
+    if (seed.length > 81) {
+      seed = seed.slice(0, 81);
+    }
+    balance = 0;
     callback();
   });
 
@@ -277,10 +340,12 @@ vorpal
       tag: ''
     }];
 
-    iotajs.api.sendTransfer(seed, 9, 18, transfers, {}, err => {
+    iotajs.api.sendTransfer(seed, depth, minWeightMagnitude, transfers, {}, err => {
       if (err) {
         vorpal.log(chalk.red(err));
       }
+
+      vorpal.log(chalk.green('Transfer complete!'));
       callback();
     });
   });
