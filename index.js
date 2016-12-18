@@ -11,7 +11,6 @@ const milestoneLag = 15;
 const minNeighbors = 4;
 const maxNeighbors = 9;
 
-let balance = 0;
 let currentNodeInfo = undefined;
 let depth = 9;
 let minWeightMagnitude = 18;
@@ -165,7 +164,7 @@ vorpal
           return reject(err);
         }
 
-        balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
+        const balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
         vorpal.log(`Your current balance is ${chalk.yellow(balance)} iota.`);
 
         resolve();
@@ -277,7 +276,6 @@ vorpal
       vorpal.log('This may take a few seconds for a remote node.  Did you turn on remote access?');
     }
     minWeightMagnitude = 18;
-    balance = 0;
     refreshServerInfo();
     callback();
   });
@@ -314,7 +312,7 @@ vorpal
     if (seed.length > 81) {
       seed = seed.slice(0, 81);
     }
-    balance = 0;
+
     callback();
   });
 
