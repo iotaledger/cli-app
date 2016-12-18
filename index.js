@@ -113,12 +113,15 @@ vorpal
         return callback();
       }
 
-      vorpal.log(`The address is ${chalk.yellow(address)}`);
-      vorpal.log('Now we will send that address into the iota tangle.  One moment.');
+      const addressWithChecksum = iotajs.utils.addChecksum(address);
+      vorpal.log(`The address is ${chalk.yellow(addressWithChecksum)}`);
+      vorpal.log('Now we will register that address into the iota tangle.  One moment.');
 
-      var transfers = [{
-        address: address,
-        value: 0
+      const transfers = [{
+        address,
+        value: 0,
+        message: '',
+        tag: ''
       }];
 
       iotajs.api.sendTransfer(seed, depth, minWeightMagnitude, transfers, (err) => {
@@ -163,7 +166,7 @@ vorpal
         }
 
         balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
-        vorpal.log(`Your current balance is ${balance} iota.`);
+        vorpal.log(`Your current balance is ${chalk.yellow(balance)} iota.`);
 
         resolve();
       });
@@ -181,6 +184,7 @@ vorpal
 
 vorpal
   .command('healthcheck', 'Looks for any node problems.')
+  .alias('health')
   .action((args, callback) => {
     if (!currentNodeInfo) {
       vorpal.log(chalk.red('It looks like you are not connected to an iota node.  Try "node".'));
@@ -272,6 +276,7 @@ vorpal
     if (host !== 'http://localhost') {
       vorpal.log('This may take a few seconds for a remote node.  Did you turn on remote access?');
     }
+    minWeightMagnitude = 18;
     balance = 0;
     refreshServerInfo();
     callback();
@@ -327,20 +332,33 @@ vorpal
     }
 
     if (Number.isNaN(args.value) || Math.floor(args.value) !== args.value) {
-      vorpal.log(chalk.red('Please supply an integer amount.'));
+      vorpal.log(chalk.red('Please supply an integer for the value.'));
       return callback();
     }
 
+    if (parseInt(args.value) === 0) {
+      vorpal.log(chalk.red('The value cannot be zero.'));
+      return callback();
+    }
+
+    if (args.address.length === 90 && !iotajs.utils.isValidChecksum(args.address)) {
+      vorpal.log(chalk.red('That address appears malformed.  Please check it.'));
+      return callback();
+    }
+
+    const address = args.address.length === 81
+      ? iotajs.utils.addChecksum(args.address)
+      : args.address;
+
     vorpal.log('One moment while the transfer is made.  This can take a few minutes.');
-    // TODO handle message and tag
-    var transfers = [{
-      address: args.address,
+    const transfers = [{
+      address,
       value: parseInt(args.value),
       message: '',
       tag: ''
     }];
 
-    iotajs.api.sendTransfer(seed, depth, minWeightMagnitude, transfers, {}, err => {
+    iotajs.api.sendTransfer(seed, depth, minWeightMagnitude, transfers, err => {
       if (err) {
         vorpal.log(chalk.red(err));
       }
