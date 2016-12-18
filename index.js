@@ -11,7 +11,7 @@ const milestoneLag = 15;
 const minNeighbors = 4;
 const maxNeighbors = 9;
 
-let balance = 0;
+let accountData = null;
 let currentNodeInfo = undefined;
 let depth = 9;
 let minWeightMagnitude = 18;
@@ -150,29 +150,15 @@ vorpal
 
     vorpal.log('One moment while we collect the data.');
 
-    new Promise((resolve, reject) => {
-      iotajs.api.getNewAddress(seed, {returnAll: true}, (err, addresses) => {
-        if (err) {
-          return reject(err);
-        }
-
-        resolve(addresses);
-      });
-    })
-    .then(addresses => new Promise((resolve, reject) => {
-      iotajs.api.getBalances(addresses, 100, (err, data) => {
-        if (err) {
-          return reject(err);
-        }
-
-        balance = data.balances.reduce((prev, curr) => prev + parseInt(curr), 0);
-        vorpal.log(`Your current balance is ${chalk.yellow(balance)} iota.`);
-
-        resolve();
-      });
-    }))
-    .catch(err => vorpal.log(chalk.red(err)))
-    .finally(callback);
+    iotajs.api.getAccountData(seed, (err, newAccountData) => {
+      if (err) {
+        vorpal.log(chalk.red('errrrrrr', err.length));
+        return callback();
+      }
+      accountData = newAccountData;
+      vorpal.log(`Your current balance is ${chalk.yellow(accountData.balance)} iota.`);
+      callback();
+    });
   });
 
 vorpal
@@ -277,7 +263,6 @@ vorpal
       vorpal.log('This may take a few seconds for a remote node.  Did you turn on remote access?');
     }
     minWeightMagnitude = 18;
-    balance = 0;
     refreshServerInfo();
     callback();
   });
@@ -314,7 +299,8 @@ vorpal
     if (seed.length > 81) {
       seed = seed.slice(0, 81);
     }
-    balance = 0;
+
+    accountData = null;
     callback();
   });
 
@@ -366,6 +352,13 @@ vorpal
       vorpal.log(chalk.green('Transfer complete!'));
       callback();
     });
+  });
+
+vorpal
+  .mode('repl')
+  .action(function(command, callback) {
+    this.log(eval(command));
+    callback();
   });
 
 setDelimiter();
