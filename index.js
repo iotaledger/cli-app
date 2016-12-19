@@ -259,7 +259,7 @@ vorpal
 vorpal
   .command('node <address>', 'connects to a new iota node. (ex. 1.2.3.4)')
   .action((args, callback) => {
-    const pieces = args.address.replace(/\d:\/\//, '').split(':');
+    const pieces = args.address.replace(/\w+:\/\//, '').split(':');
     const host = `http://${pieces[0]}`;
     let port = 14265;
     if (pieces.length > 1) {
