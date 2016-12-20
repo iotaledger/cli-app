@@ -47,10 +47,10 @@ const refreshServerInfo = () => {
   iotajs.api.getNodeInfo((err, nodeInfo) => {
     if (err) {
       currentNodeInfo = undefined;
-      return;
+    } else {
+      currentNodeInfo = nodeInfo;
     }
 
-    currentNodeInfo = nodeInfo;
     setDelimiter();
   });
 };
