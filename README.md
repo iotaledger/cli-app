@@ -1,4 +1,4 @@
-# cli-app
+# IOTA CLI Wallet
 
 Command line interface (CLI) app that acts as an IOTA wallet and node management tool.
 
