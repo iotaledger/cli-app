@@ -2,9 +2,12 @@
 'use strict';
 
 const IOTA = require('iota.lib.js');
-const { setDelimiter, setupPrompt } = require('./lib/prompt');
+const prompt = require('./lib/prompt');
 const setupCommands = require('./lib/commands/index');
 const vorpal = require('vorpal')();
+
+const setDelimiter = prompt.setDelimiter;
+const setupPrompt = prompt.setupPrompt;
 
 const data = {
   currentNodeInfo: undefined,
