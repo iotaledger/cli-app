@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const chalk = require('chalk');
 const IOTA = require('iota.lib.js');
 const prompt = require('./lib/prompt');
 const setupCommands = require('./lib/commands/index');
@@ -10,6 +11,7 @@ const setDelimiter = prompt.setDelimiter;
 const setupPrompt = prompt.setupPrompt;
 
 const data = {
+  accountData: undefined,
   currentNodeInfo: undefined,
   depth: 9,
   maxNeighbors: 9,
@@ -24,6 +26,30 @@ const iotajs = new IOTA({
   port: 14265
 });
 
+let refreshAccountDataTimer;
+const refreshAccountData = () => {
+  if (refreshAccountDataTimer) {
+    clearTimeout(refreshAccountDataTimer);
+  }
+
+  if (data.seed) {
+    iotajs.api.getAccountData(data.seed, (err, accountData) => {
+      if (err) {
+        // on fail, retry fast
+        refreshAccountDataTimer = setTimeout(refreshAccountData, 30 * 1000);
+        return;
+      }
+
+      if (!data.accountData) {
+        vorpal.log(chalk.green('Account data retrieved.'));
+      }
+      data.accountData = accountData;
+      // on success, retry slow.
+      refreshAccountDataTimer = setTimeout(refreshAccountData, 2 * 60 * 1000);
+    });
+  }
+};
+
 const refreshServerInfo = () => {
   iotajs.api.getNodeInfo((err, nodeInfo) => {
     if (err) {
@@ -37,11 +63,12 @@ const refreshServerInfo = () => {
 };
 
 setupPrompt(data, iotajs, vorpal);
-setupCommands(data, iotajs, refreshServerInfo, vorpal);
+setupCommands(data, iotajs, refreshAccountData, refreshServerInfo, vorpal);
 
 // Give the local connection a little time to connect, then get new data periodically.
+// TODO make this more deterministic.  timeouts = ugly
 setTimeout(refreshServerInfo, 100);
-setInterval(refreshServerInfo, 10 * 1000);
+setInterval(refreshServerInfo, 15 * 1000);
 
 // Give the iotajs connection time to settle before processing command line params
 // TODO make this more deterministic.  timeouts = ugly
