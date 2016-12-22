@@ -20,7 +20,7 @@
     "app",
     "wallet"
   ],
-  "author": "Mark Bradshaw (IOTA Foundation)",
+  "author": "IOTA Foundation <info@iotatoken.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/iotaledger/cli-app/issues"
