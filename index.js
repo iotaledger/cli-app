@@ -36,7 +36,7 @@ const refreshAccountData = () => {
     iotajs.api.getAccountData(data.seed, (err, accountData) => {
       if (err) {
         // on fail, retry fast
-        refreshAccountDataTimer = setTimeout(refreshAccountData, 30 * 1000);
+        refreshAccountDataTimer = setTimeout(refreshAccountData, 10 * 1000);
         return;
       }
 
@@ -44,7 +44,9 @@ const refreshAccountData = () => {
         vorpal.log(chalk.green('Account data retrieved.'));
       }
       data.accountData = accountData;
-      // on success, retry slow.
+      setDelimiter();
+
+      // on success, refresh slowly.
       refreshAccountDataTimer = setTimeout(refreshAccountData, 2 * 60 * 1000);
     });
   }
