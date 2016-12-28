@@ -2,6 +2,7 @@
 'use strict';
 
 const chalk = require('chalk');
+const config = require('./lib/config');
 const IOTA = require('iota.lib.js');
 const prompt = require('./lib/prompt');
 const setupCommands = require('./lib/commands/index');
@@ -58,6 +59,15 @@ const refreshServerInfo = () => {
       data.currentNodeInfo = undefined;
     } else {
       data.currentNodeInfo = nodeInfo;
+
+      // Also, see if we should store this node info in the config file
+      config.get('nodes', []).then(nodes => {
+        if (nodes.indexOf(`${iotajs.host}:${iotajs.port}`) === -1) {
+          nodes.push(`${iotajs.host}:${iotajs.port}`);
+          nodes = nodes.sort();
+          config.set('nodes', nodes);
+        }
+      });
     }
 
     setDelimiter();
