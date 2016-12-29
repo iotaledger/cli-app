@@ -62,8 +62,9 @@ const refreshServerInfo = () => {
 
       // Also, see if we should store this node info in the config file
       config.get('nodes', []).then(nodes => {
-        if (nodes.indexOf(`${iotajs.host}:${iotajs.port}`) === -1) {
-          nodes.push(`${iotajs.host}:${iotajs.port}`);
+        const node = `${iotajs.host}:${iotajs.port}`.replace('http://', '');
+        if (nodes.indexOf(node) === -1) {
+          nodes.push(node);
           nodes = nodes.sort();
           config.set('nodes', nodes);
         }
