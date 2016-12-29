@@ -1,6 +1,6 @@
 {
   "name": "cli-app",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "IOTA CLI",
   "main": "index.js",
   "engines": {
