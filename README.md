@@ -4,11 +4,12 @@ Command line interface (CLI) app that acts as an IOTA wallet and node management
 
 ## Installation
 
-You need node and a functioning IOTA node to connect to.  The IOTA node is often on the same computer as the CLI, but the CLI can work with remote nodes as well.
+You need:
+1. [Node.js](https://npmjs.org) installed on your matching.  
+1. A functioning [IOTA node](https://github.com/iotaledger/iri) to connect to.  The IOTA node can be on the same computer as the CLI, but the CLI can work with remote nodes as well if they are configured using `--remote`.
 
-**NOTE:** This is still being built, and has yet to be published to npm.  When it is, we'll have a nice little npm install command.  For now, clone this repo, cd into it, and do:
-
-`npm install`
+To install:
+`npm install -g iota-cli-app`
 
 ## Usage
 
