@@ -18,7 +18,7 @@ const data = {
   maxNeighbors: 9,
   milestoneLag: 15,
   minNeighbors: 4,
-  minWeightMagnitude: 18,
+  minWeightMagnitude: 3,
   seed: ''
 };
 
