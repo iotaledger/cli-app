@@ -19,7 +19,8 @@ const data = {
   milestoneLag: 15,
   minNeighbors: 4,
   minWeightMagnitude: 3,
-  seed: ''
+  seed: '',
+  numAddresses: undefined
 };
 
 const iotajs = new IOTA({
@@ -34,7 +35,8 @@ const refreshAccountData = () => {
   }
 
   if (data.seed) {
-    iotajs.api.getAccountData(data.seed, (err, accountData) => {
+    var options = {'start': 0, 'end': data.numAddresses};
+    iotajs.api.getAccountData(data.seed,  options, (err, accountData) => {
       if (err) {
         // on fail, retry fast
         refreshAccountDataTimer = setTimeout(refreshAccountData, 10 * 1000);
